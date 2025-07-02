@@ -1,14 +1,26 @@
 # frozen_string_literal: true
 
 require_relative "hwayo/version"
+require_relative "hwayo/pdf_extractor"
 require 'open3'
 require 'tempfile'
 
 module Hwayo
   class Error < StandardError; end
   
+  # Extract text from HWP or PDF file
+  def self.extract_text(file_path, output_path = nil)
+    return extract_pdf(file_path, output_path) if file_path.downcase.end_with?('.pdf')
+    extract_hwp(file_path, output_path)
+  end
+  
+  # Extract text from PDF file
+  def self.extract_pdf(pdf_file_path, output_path = nil)
+    PdfExtractor.extract_text(pdf_file_path, output_path)
+  end
+  
   # Extract text from HWP file
-  def self.extract_text(hwp_file_path, output_path = nil)
+  def self.extract_hwp(hwp_file_path, output_path = nil)
     raise Error, "HWP file not found: #{hwp_file_path}" unless File.exist?(hwp_file_path)
     
     # Java 실행 가능 여부 확인

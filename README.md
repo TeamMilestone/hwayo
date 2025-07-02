@@ -2,11 +2,12 @@
 
 [![Gem Version](https://badge.fury.io/rb/hwayo.svg)](https://badge.fury.io/rb/hwayo)
 
-Hwayo는 한글(HWP) 파일에서 텍스트를 추출하는 Ruby gem입니다. Java 기반의 [hwplib](https://github.com/neolord0/hwplib) 라이브러리를 Ruby에서 쉽게 사용할 수 있도록 래핑하였습니다.
+Hwayo는 한글(HWP) 및 PDF 파일에서 텍스트를 추출하는 Ruby gem입니다. Java 기반의 [hwplib](https://github.com/neolord0/hwplib)와 [Apache PDFBox](https://pdfbox.apache.org/) 라이브러리를 Ruby에서 쉽게 사용할 수 있도록 래핑하였습니다.
 
 ## 특징
 
 - 한글(HWP) 파일에서 텍스트 추출
+- PDF 파일에서 텍스트 추출 (Apache PDFBox 3.0.5 사용)
 - 표, 그림 설명 등 컨트롤 텍스트 포함 추출
 - 간단한 Ruby 인터페이스
 - 파일 저장 또는 문자열 반환 선택 가능
@@ -16,6 +17,7 @@ Hwayo는 한글(HWP) 파일에서 텍스트를 추출하는 Ruby gem입니다. J
 - Ruby 2.7.0 이상
 - Java 8 이상 설치 필요
 - hwplib JAR 파일 (자동 포함 또는 별도 다운로드)
+- PDFBox JAR 파일 (자동 포함)
 
 ## 설치
 
@@ -48,17 +50,34 @@ if result[:success]
 else
   puts "Error: #{result[:error]}"
 end
+
+# PDF 파일에서 텍스트 추출
+result = Hwayo.extract_text('document.pdf')
+
+if result[:success]
+  puts result[:text]
+else
+  puts "Error: #{result[:error]}"
+end
 ```
 
 ### 파일로 저장
 
 ```ruby
-# 추출한 텍스트를 파일로 저장
+# HWP에서 추출한 텍스트를 파일로 저장
 result = Hwayo.extract_text('document.hwp', 'output.txt')
 
 if result[:success]
   puts "텍스트가 저장되었습니다: #{result[:output_path]}"
-  puts "추출된 텍스트 길이: #{result[:text].length} 문자"
+else
+  puts "오류 발생: #{result[:error]}"
+end
+
+# PDF에서 추출한 텍스트를 파일로 저장
+result = Hwayo.extract_text('document.pdf', 'output.txt')
+
+if result[:success]
+  puts "텍스트가 저장되었습니다: #{result[:output_path]}"
 else
   puts "오류 발생: #{result[:error]}"
 end
@@ -67,16 +86,17 @@ end
 ### 여러 파일 일괄 처리
 
 ```ruby
-hwp_files = Dir.glob("*.hwp")
+# HWP와 PDF 파일 모두 처리
+files = Dir.glob("*.{hwp,pdf}")
 
-hwp_files.each do |hwp_file|
-  output_file = hwp_file.gsub('.hwp', '.txt')
-  result = Hwayo.extract_text(hwp_file, output_file)
+files.each do |file|
+  output_file = file.gsub(/\.(hwp|pdf)$/i, '.txt')
+  result = Hwayo.extract_text(file, output_file)
   
   if result[:success]
-    puts "✓ #{hwp_file} → #{output_file}"
+    puts "✓ #{file} → #{output_file}"
   else
-    puts "✗ #{hwp_file}: #{result[:error]}"
+    puts "✗ #{file}: #{result[:error]}"
   end
 end
 ```
@@ -118,17 +138,25 @@ end
 
 ### JAR 파일 위치 지정
 
-hwayo는 다음 순서로 hwplib JAR 파일을 찾습니다:
+hwayo는 다음 순서로 JAR 파일을 찾습니다:
 
+**HWP 처리용 hwplib JAR:**
 1. gem 내부의 `lib/hwayo/java/hwplib-1.1.10.jar`
 2. 현재 디렉토리의 `hwplib-1.1.10.jar`
 3. 현재 디렉토리의 `target/hwplib-1.1.10.jar`
 4. 환경 변수 `HWPLIB_JAR_PATH`
 
+**PDF 처리용 PDFBox JAR:**
+1. gem 내부의 `lib/hwayo/java/pdfbox-app-3.0.5.jar`
+2. 현재 디렉토리의 `pdfbox-app-3.0.5.jar`
+3. 현재 디렉토리의 `target/pdfbox-app-3.0.5.jar`
+4. 환경 변수 `PDFBOX_JAR_PATH`
+
 커스텀 경로 지정:
 
 ```bash
 export HWPLIB_JAR_PATH=/path/to/hwplib-1.1.10.jar
+export PDFBOX_JAR_PATH=/path/to/pdfbox-app-3.0.5.jar
 ```
 
 ### Docker에서 사용하기
@@ -189,8 +217,8 @@ puts result[:text].encoding  # UTF-8이어야 함
 
 ## 제한사항
 
-- 암호화된 HWP 파일은 지원하지 않습니다
-- 이미지, PDF, HTML로 변환은 지원하지 않습니다
+- 암호화된 HWP/PDF 파일은 지원하지 않습니다
+- 이미지, HTML로 변환은 지원하지 않습니다
 - Java 프로세스 실행으로 인한 오버헤드가 있습니다
 
 ## 기여하기
